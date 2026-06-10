@@ -1,0 +1,134 @@
+{
+  "dataset": "edgeiiotset",
+  "label_key": "Attack_type",
+  "normalization": {
+    "OS_Fingerprinting": "Fingerprinting"
+  },
+  "raw_source_label_counts": {
+    "Backdoor": 24862,
+    "DDoS_HTTP": 229022,
+    "DDoS_ICMP": 2914354,
+    "DDoS_TCP": 2020120,
+    "DDoS_UDP": 3201626,
+    "Fingerprinting": 1001,
+    "MITM": 1229,
+    "Normal": 11209913,
+    "Password": 1053385,
+    "Port_Scanning": 22564,
+    "Ransomware": 10925,
+    "SQL_injection": 51203,
+    "Uploading": 37634,
+    "Vulnerability_scanner": 145869,
+    "XSS": 15915
+  },
+  "raw_source_labels": {
+    "Backdoor": {
+      "Backdoor": 24862
+    },
+    "DDoS_HTTP_Flood": {
+      "DDoS_HTTP": 229022
+    },
+    "DDoS_ICMP_Flood": {
+      "DDoS_ICMP": 2914354
+    },
+    "DDoS_TCP_SYN_Flood": {
+      "DDoS_TCP": 2020120
+    },
+    "DDoS_UDP_Flood": {
+      "DDoS_UDP": 3201626
+    },
+    "Distance": {
+      "Normal": 1143540
+    },
+    "Flame_Sensor": {
+      "Normal": 1070196
+    },
+    "Heart_Rate": {
+      "Normal": 165319
+    },
+    "IR_Receiver": {
+      "Normal": 1307778
+    },
+    "MITM": {
+      "MITM": 1229
+    },
+    "Modbus": {
+      "Normal": 159502
+    },
+    "OS_Fingerprinting": {
+      "Fingerprinting": 1001
+    },
+    "Password": {
+      "Password": 1053385
+    },
+    "Port_Scanning": {
+      "Port_Scanning": 22564
+    },
+    "Ransomware": {
+      "Ransomware": 10925
+    },
+    "SQL_injection": {
+      "SQL_injection": 51203
+    },
+    "Soil_Moisture": {
+      "Normal": 1192777
+    },
+    "Sound_Sensor": {
+      "Normal": 1512883
+    },
+    "Temperature_and_Humidity": {
+      "Normal": 1615722
+    },
+    "Uploading": {
+      "Uploading": 37634
+    },
+    "Vulnerability_scanner": {
+      "Vulnerability_scanner": 145869
+    },
+    "Water_Level": {
+      "Normal": 2295288
+    },
+    "XSS": {
+      "XSS": 15915
+    },
+    "phValue": {
+      "Normal": 746908
+    }
+  },
+  "selected_label_counts": {
+    "DNN-EdgeIIoT-dataset.csv": {
+      "Backdoor": 24862,
+      "DDoS_HTTP": 49911,
+      "DDoS_ICMP": 116436,
+      "DDoS_TCP": 50062,
+      "DDoS_UDP": 121568,
+      "Fingerprinting": 1001,
+      "MITM": 1214,
+      "Normal": 1615643,
+      "Password": 50153,
+      "Port_Scanning": 22564,
+      "Ransomware": 10925,
+      "SQL_injection": 51203,
+      "Uploading": 37634,
+      "Vulnerability_scanner": 50110,
+      "XSS": 15915
+    },
+    "ML-EdgeIIoT-dataset.csv": {
+      "Backdoor": 10195,
+      "DDoS_HTTP": 10561,
+      "DDoS_ICMP": 14090,
+      "DDoS_TCP": 10247,
+      "DDoS_UDP": 14498,
+      "Fingerprinting": 1001,
+      "MITM": 1214,
+      "Normal": 24301,
+      "Password": 9989,
+      "Port_Scanning": 10071,
+      "Ransomware": 10925,
+      "SQL_injection": 10311,
+      "Uploading": 10269,
+      "Vulnerability_scanner": 10076,
+      "XSS": 10052
+    }
+  }
+}

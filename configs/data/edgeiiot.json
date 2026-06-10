@@ -1,0 +1,8 @@
+{
+  "count_rows_default": false,
+  "edge_root": "data/raw/edgeiiotset/full_dataset",
+  "prompt_sample_count": 32,
+  "split_seed": 20260531,
+  "train_ratio": 0.7,
+  "val_ratio": 0.1
+}

@@ -1,0 +1,4 @@
+{
+  "snli_root": "data/raw/snli/current",
+  "source_url": "https://nlp.stanford.edu/projects/snli/snli_1.0.zip"
+}

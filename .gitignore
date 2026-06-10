@@ -1,0 +1,26 @@
+# Raw datasets (large files — download instructions in data/README.md)
+data/raw/
+
+# External baseline code (clone separately — see HANDOFF.md)
+data/external/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# pytest
+.pytest_cache/
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

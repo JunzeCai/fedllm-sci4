@@ -1,0 +1,21 @@
+{
+  "dataset": "snli_1.0",
+  "root": "/Users/ze/fedllm/data/raw/snli/snli_1.0",
+  "splits": {
+    "dev": {
+      "bytes": 9745714,
+      "path": "/Users/ze/fedllm/data/raw/snli/snli_1.0/snli_1.0_dev.jsonl",
+      "rows": 10000
+    },
+    "test": {
+      "bytes": 9730457,
+      "path": "/Users/ze/fedllm/data/raw/snli/snli_1.0/snli_1.0_test.jsonl",
+      "rows": 10000
+    },
+    "train": {
+      "bytes": 487457790,
+      "path": "/Users/ze/fedllm/data/raw/snli/snli_1.0/snli_1.0_train.jsonl",
+      "rows": 550152
+    }
+  }
+}

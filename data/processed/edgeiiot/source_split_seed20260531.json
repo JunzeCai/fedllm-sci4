@@ -1,0 +1,114 @@
+{
+  "excluded_sources": [
+    "DNN",
+    "ML"
+  ],
+  "seed": 20260531,
+  "source_files": {
+    "Backdoor": [
+      "Attack traffic/Backdoor_attack.csv"
+    ],
+    "DDoS_HTTP_Flood": [
+      "Attack traffic/DDoS_HTTP_Flood_attack.csv"
+    ],
+    "DDoS_ICMP_Flood": [
+      "Attack traffic/DDoS_ICMP_Flood_attack.csv"
+    ],
+    "DDoS_TCP_SYN_Flood": [
+      "Attack traffic/DDoS_TCP_SYN_Flood_attack.csv"
+    ],
+    "DDoS_UDP_Flood": [
+      "Attack traffic/DDoS_UDP_Flood_attack.csv"
+    ],
+    "Distance": [
+      "Normal traffic/Distance/Distance.csv"
+    ],
+    "Flame_Sensor": [
+      "Normal traffic/Flame_Sensor/Flame_Sensor.csv"
+    ],
+    "Heart_Rate": [
+      "Normal traffic/Heart_Rate/Heart_Rate.csv"
+    ],
+    "IR_Receiver": [
+      "Normal traffic/IR_Receiver/IR_Receiver.csv"
+    ],
+    "MITM": [
+      "Attack traffic/MITM_attack.csv"
+    ],
+    "Modbus": [
+      "Normal traffic/Modbus/Modbus.csv"
+    ],
+    "OS_Fingerprinting": [
+      "Attack traffic/OS_Fingerprinting_attack.csv"
+    ],
+    "Password": [
+      "Attack traffic/Password_attack.csv"
+    ],
+    "Port_Scanning": [
+      "Attack traffic/Port_Scanning_attack.csv"
+    ],
+    "Ransomware": [
+      "Attack traffic/Ransomware_attack.csv"
+    ],
+    "SQL_injection": [
+      "Attack traffic/SQL_injection_attack.csv"
+    ],
+    "Soil_Moisture": [
+      "Normal traffic/Soil_Moisture/Soil_Moisture.csv"
+    ],
+    "Sound_Sensor": [
+      "Normal traffic/Sound_Sensor/Sound_Sensor.csv"
+    ],
+    "Temperature_and_Humidity": [
+      "Normal traffic/Temperature_and_Humidity/Temperature_and_Humidity.csv"
+    ],
+    "Uploading": [
+      "Attack traffic/Uploading_attack.csv"
+    ],
+    "Vulnerability_scanner": [
+      "Attack traffic/Vulnerability_scanner_attack.csv"
+    ],
+    "Water_Level": [
+      "Normal traffic/Water_Level/Water_Level.csv"
+    ],
+    "XSS": [
+      "Attack traffic/XSS_attack.csv"
+    ],
+    "phValue": [
+      "Normal traffic/phValue/phValue.csv"
+    ]
+  },
+  "strategy": "source-aware",
+  "test": [
+    "DDoS_ICMP_Flood",
+    "Heart_Rate",
+    "IR_Receiver",
+    "Ransomware",
+    "Vulnerability_scanner",
+    "phValue"
+  ],
+  "train": [
+    "Backdoor",
+    "DDoS_HTTP_Flood",
+    "DDoS_UDP_Flood",
+    "Distance",
+    "Flame_Sensor",
+    "MITM",
+    "Modbus",
+    "OS_Fingerprinting",
+    "Password",
+    "Port_Scanning",
+    "SQL_injection",
+    "Sound_Sensor",
+    "Temperature_and_Humidity",
+    "Uploading",
+    "Water_Level",
+    "XSS"
+  ],
+  "train_ratio": 0.7,
+  "val": [
+    "DDoS_TCP_SYN_Flood",
+    "Soil_Moisture"
+  ],
+  "val_ratio": 0.1
+}
