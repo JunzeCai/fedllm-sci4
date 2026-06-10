@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 from pathlib import Path
 from typing import Any
@@ -43,8 +44,11 @@ def main() -> int:
     edge_out.mkdir(parents=True, exist_ok=True)
     snli_out.mkdir(parents=True, exist_ok=True)
 
+    repo_root = Path.cwd().resolve()
+
     edge_manifest = build_file_manifest(Path(args.edge_root), count_rows=args.count_rows)
-    write_json(edge_out / "file_manifest.json", edge_manifest)
+    edge_manifest_out = make_portable_manifest(edge_manifest, repo_root=repo_root) if args.relative_paths else edge_manifest
+    write_json(edge_out / "file_manifest.json", add_generation_metadata(edge_manifest_out, args, path_mode=edge_manifest_out.get("path_mode", "absolute")))
 
     split_plan = make_source_split_plan(
         edge_manifest,
@@ -52,21 +56,23 @@ def main() -> int:
         train_ratio=args.train_ratio,
         val_ratio=args.val_ratio,
     )
-    write_json(edge_out / f"source_split_seed{args.seed}.json", split_plan)
+    write_json(edge_out / f"source_split_seed{args.seed}.json", add_generation_metadata(split_plan, args, path_mode="relative"))
 
     label_inventory = build_label_inventory(edge_manifest, scan_selected=not args.skip_selected_label_scan)
-    write_json(edge_out / "label_inventory.json", label_inventory)
+    write_json(edge_out / "label_inventory.json", add_generation_metadata(label_inventory, args, path_mode="relative"))
 
     sample_count = write_prompt_smoke_samples(edge_manifest, edge_out / "prompt_smoke_samples.jsonl", args.sample_count)
 
     snli_manifest = build_snli_manifest(Path(args.snli_root))
-    write_json(snli_out / "manifest.json", snli_manifest)
+    snli_manifest_out = make_portable_manifest(snli_manifest, repo_root=repo_root) if args.relative_paths else snli_manifest
+    write_json(snli_out / "manifest.json", add_generation_metadata(snli_manifest_out, args, path_mode=snli_manifest_out.get("path_mode", "absolute")))
 
     print(
         json.dumps(
             {
                 "edge_files": edge_manifest["file_count"],
                 "edge_sources": edge_manifest["source_count"],
+                "path_mode": "relative" if args.relative_paths else "absolute",
                 "source_split": {
                     "train": len(split_plan["train"]),
                     "val": len(split_plan["val"]),
@@ -100,7 +106,59 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip label distribution scans over selected merged Edge-IIoTset CSV files.",
     )
+    parser.add_argument(
+        "--relative-paths",
+        action="store_true",
+        help="Write repository-relative paths into generated manifests for portable server reproduction.",
+    )
     return parser.parse_args()
+
+
+def add_generation_metadata(payload: dict[str, Any], args: argparse.Namespace, *, path_mode: str) -> dict[str, Any]:
+    result = copy.deepcopy(payload)
+    result.setdefault("schema_version", "2026-06-10")
+    result["path_mode"] = path_mode
+    result["generation"] = {
+        "tool": "scripts/prepare_datasets.py",
+        "seed": args.seed,
+        "count_rows": bool(args.count_rows),
+        "relative_paths": bool(args.relative_paths),
+    }
+    return result
+
+
+def make_portable_manifest(payload: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    result = copy.deepcopy(payload)
+    result["path_mode"] = "relative"
+
+    if "root" in result:
+        result["root"] = _to_relative_or_original(result["root"], repo_root)
+
+    for item in result.get("files", []):
+        if "path" in item:
+            item["path"] = _to_relative_or_original(item["path"], repo_root)
+
+    for split_item in result.get("splits", {}).values():
+        if "path" in split_item:
+            split_item["path"] = _to_relative_or_original(split_item["path"], repo_root)
+    return result
+
+
+def _to_relative_or_original(path_value: str, repo_root: Path) -> str:
+    path = Path(path_value)
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.resolve().relative_to(repo_root).as_posix()
+    except ValueError:
+        # Preserve only the dataset-internal suffix when the original manifest was
+        # generated on another machine. This avoids committing /Users/... paths.
+        parts = path.parts
+        for marker in ("data", "raw"):
+            if marker in parts:
+                index = parts.index(marker)
+                return Path(*parts[index:]).as_posix()
+        return path.name
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
