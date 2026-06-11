@@ -1,20 +1,28 @@
 {
   "dataset": "snli_1.0",
-  "root": "/Users/ze/fedllm/data/raw/snli/snli_1.0",
+  "generation": {
+    "count_rows": true,
+    "relative_paths": true,
+    "seed": 20260531,
+    "tool": "scripts/prepare_datasets.py"
+  },
+  "path_mode": "relative",
+  "root": "data/raw/snli/snli_1.0",
+  "schema_version": "2026-06-10",
   "splits": {
     "dev": {
       "bytes": 9745714,
-      "path": "/Users/ze/fedllm/data/raw/snli/snli_1.0/snli_1.0_dev.jsonl",
+      "path": "data/raw/snli/snli_1.0/snli_1.0_dev.jsonl",
       "rows": 10000
     },
     "test": {
       "bytes": 9730457,
-      "path": "/Users/ze/fedllm/data/raw/snli/snli_1.0/snli_1.0_test.jsonl",
+      "path": "data/raw/snli/snli_1.0/snli_1.0_test.jsonl",
       "rows": 10000
     },
     "train": {
       "bytes": 487457790,
-      "path": "/Users/ze/fedllm/data/raw/snli/snli_1.0/snli_1.0_train.jsonl",
+      "path": "data/raw/snli/snli_1.0/snli_1.0_train.jsonl",
       "rows": 550152
     }
   }

@@ -99,6 +99,8 @@ Prepared artifacts:
 data/processed/edgeiiot/file_manifest.json
 data/processed/edgeiiot/source_split_seed20260531.json
 data/processed/edgeiiot/label_inventory.json
+data/processed/edgeiiot/selected_ml_stratified_split_seed20260531.json
+data/processed/edgeiiot/selected_ml_clients_seed20260531_K10_alpha0.5.json
 data/processed/edgeiiot/prompt_smoke_samples.jsonl
 data/processed/snli/manifest.json
 ```
@@ -110,7 +112,8 @@ PYTHONPATH=src python3 scripts/prepare_datasets.py \
   --edge-root data/raw/edgeiiotset/full_dataset \
   --snli-root data/raw/snli/current \
   --out-dir data/processed \
-  --count-rows
+  --count-rows \
+  --relative-paths
 ```
 
 Generated Edge-IIoTset summary:
@@ -121,6 +124,9 @@ Generated Edge-IIoTset summary:
 - Excluded from source-aware split: `DNN` and `ML` selected merged files, because they no longer preserve original file/source boundaries.
 - Prompt smoke samples: 32 JSONL examples from `Selected dataset for ML and DL/ML-EdgeIIoT-dataset.csv`.
 - Label inventory: 15 normalized labels.
+- Main selected-ML stratified split seed: `20260531`.
+- Main selected-ML split sizes: 126,233 train rows, 15,774 validation rows, 15,793 test rows.
+- Main simulated FL client partition: `K=10`, Dirichlet label-skew `alpha=0.5`, generated from the selected-ML training split.
 
 Label normalization currently applied:
 
@@ -155,7 +161,7 @@ e9e649822ce63437535f72fbf06c146a22b9e527
 The official Fed-SB SNLI data location is connected by symlink:
 
 ```text
-data/external/fed-sb/fed_sb/DP/SNLI/data/snli_1.0 -> /Users/ze/fedllm/data/raw/snli/snli_1.0
+data/external/fed-sb/fed_sb/DP/SNLI/data/snli_1.0 -> data/raw/snli/snli_1.0
 ```
 
 Server-side reproduction wrappers:

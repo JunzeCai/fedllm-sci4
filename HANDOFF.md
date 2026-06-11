@@ -22,10 +22,11 @@
 | 模块 | 状态 | 说明 |
 |---|---|---|
 | **研究设计文档** | ✅ | `docs/superpowers/specs/` 下 1313 行的 v0.3 文献校准版，包含完整数学公式、实验矩阵、消融设计、风险登记册 |
-| **数据准备层** | ✅ | `src/fedllm_data/` + `tests/`，8 个 pytest 全部通过 |
+| **数据准备层** | ✅ | `src/fedllm_data/` + `tests/`，覆盖 manifest、主 split、client partition、portable paths |
+| **方法核心工具** | ✅ | `src/spectra/`，NumPy 版 SVD basis、core adapter、DP accountant、FL aggregation、metrics，CPU synthetic tests 已覆盖 |
 | **Edge-IIoTset 数据集** | ✅ | 已下载并解压到 `data/raw/edgeiiotset/full/`，包含 14 个攻击 CSV、10 个正常 CSV、2 个合并 CSV |
 | **SNLI 数据集** | ✅ | 已下载并解压到 `data/raw/snli/snli_1.0/`，用于 Fed-SB 基线复现 |
-| **数据产物** | ✅ | `data/processed/` 下已生成清单、拆分方案、标签清单、提示样本 |
+| **数据产物** | ✅ | `data/processed/` 下已生成清单、标签清单、提示样本、selected-ML 80/10/10 split、K=10 Dirichlet client partition |
 | **Fed-SB 基线代码** | ✅ | 已克隆到 `data/external/fed-sb/`，commit `e9e64982`，SNLI 已 symlink 到官方位置 |
 | **数据集准备 CLI** | ✅ | `scripts/prepare_datasets.py` 可一键重新生成所有产物 |
 
@@ -34,9 +35,9 @@
 | 优先级 | 任务 | 预估工作量 | 阻塞项 |
 |---|---|---|---|
 | **P0** | 复现 Fed-SB 官方 SNLI 隐私联邦实验 | 1-2 天 | 服务器 GPU 环境 |
-| **P0** | 实现公开谱基构造模块（SVD → 正交基 → 核心参数化） | 2-3 天 | 需要 PyTorch + transformers + PEFT |
-| **P0** | 实现单服务器 FL 模拟框架（K=10，IID + Dirichlet Non-IID） | 2-3 天 | 需要确定 FL 引擎（自研 vs Flower） |
-| **P1** | 实现客户端 DP 协议（裁剪、高斯噪声、RDP 会计） | 2-3 天 | 需要 opacus 或自研 accountant |
+| **P0** | 把 `src/spectra/` NumPy 数学核心接入 PyTorch/PEFT 训练层 | 2-3 天 | 需要服务器 GPU 环境 |
+| **P0** | 实现单服务器训练循环（K=10，IID + Dirichlet Non-IID） | 2-3 天 | 基础 client partition artifact 已生成 |
+| **P1** | 将客户端 DP 协议接入真实训练 upload path | 1-2 天 | NumPy accountant 已有，需接 PyTorch tensor |
 | **P1** | 层-wise 自适应秩/噪声分配 | 1-2 天 | 依赖 P0 的谱基模块 |
 | **P1** | 本地残差个性化 | 1 天 | 依赖 P0 的核心训练框架 |
 | **P2** | Edge-IIoT 非 DP 冒烟测试 | 0.5 天 | 依赖 P0 的谱基模块 |
@@ -50,6 +51,7 @@
 ```
 fedllm-sci4/
 ├── HANDOFF.md                          ← 本文档
+├── README.md                           # 快速安装、验证、实验协议入口
 ├── pyproject.toml                      # 项目元数据，pytest 配置
 ├── .gitignore                          # 排除了 data/raw/ 和 data/external/
 │
@@ -64,6 +66,8 @@ fedllm-sci4/
 │   │   │   ├── file_manifest.json
 │   │   │   ├── source_split_seed20260531.json
 │   │   │   ├── label_inventory.json
+│   │   │   ├── selected_ml_stratified_split_seed20260531.json
+│   │   │   ├── selected_ml_clients_seed20260531_K10_alpha0.5.json
 │   │   │   └── prompt_smoke_samples.jsonl
 │   │   └── snli/manifest.json
 │   ├── raw/                            # ← 原始数据集（未提交，需自行准备）
@@ -86,12 +90,20 @@ fedllm-sci4/
 │   ├── prompts.py                      # 指令提示渲染
 │   └── snli.py                         # SNLI 清单构造
 │
-└── tests/                              # 8 个 pytest 测试
+├── src/spectra/                        # 方法层 NumPy 核心，服务器训练层应复用这些接口
+│   ├── basis.py                        # SVD 谱基、谱能量、rank allocation
+│   ├── adapter.py                      # SpectralCoreAdapter, Delta W = U C V^T
+│   ├── privacy.py                      # client-level Gaussian RDP accountant
+│   ├── fl.py                           # core flatten/load, weighted aggregation
+│   └── metrics.py                      # macro-F1, balanced accuracy, rare recall
+│
+└── tests/                              # 17 个 pytest 测试
     ├── test_edgeiiot_*.py
     ├── test_labels.py
     ├── test_prepare_datasets_cli.py
     ├── test_prompts.py
-    └── test_snli_manifest.py
+    ├── test_snli_manifest.py
+    └── test_spectra_*.py
 ```
 
 ---
@@ -113,8 +125,8 @@ cd fedllm-sci4
 python3 -m venv .venv
 source .venv/bin/activate
 
-# 数据准备层依赖（当前已足够跑通测试）
-pip install pytest
+# 数据准备层和 NumPy 方法核心
+pip install -e ".[dev]"
 
 # 后续核心训练需要（请根据实际安装情况逐步添加）
 pip install torch transformers peft accelerate bitsandbytes datasets
@@ -125,10 +137,11 @@ pip install scikit-learn xgboost lightgbm  # 非 LLM 基线
 ### 4.3 验证数据准备层
 
 ```bash
-PYTHONPATH=src python3 -m pytest tests/ -v
+python -m compileall src scripts
+python -m pytest -q
 ```
 
-**期望输出**：8 passed。
+**期望输出**：17 passed。
 
 ### 4.4 数据集准备
 
@@ -141,7 +154,7 @@ PYTHONPATH=src python3 -m pytest tests/ -v
 - **方式 A**：直接从本地 `data/raw/edgeiiotset/` 打包 SCP 到服务器：
   ```bash
   # 在本地执行
-  tar czf edgeiiotset_raw.tar.gz -C /Users/ze/fedllm/data/raw edgeiiotset
+  tar czf edgeiiotset_raw.tar.gz -C /path/to/local/fedllm-sci4/data/raw edgeiiotset
   scp edgeiiotset_raw.tar.gz <server>:~/fedllm-sci4/data/raw/
   # 在服务器执行
   cd ~/fedllm-sci4/data/raw && tar xzf edgeiiotset_raw.tar.gz
@@ -187,10 +200,26 @@ PYTHONPATH=src python3 scripts/prepare_datasets.py \
   --edge-root data/raw/edgeiiotset/full_dataset \
   --snli-root data/raw/snli/current \
   --out-dir data/processed \
-  --count-rows
+  --count-rows \
+  --relative-paths
 ```
 
 产物应与 `data/processed/` 下已提交的内容一致。
+
+新增主实验 artifacts：
+
+```text
+data/processed/edgeiiot/selected_ml_stratified_split_seed20260531.json
+data/processed/edgeiiot/selected_ml_clients_seed20260531_K10_alpha0.5.json
+```
+
+当前 selected ML split 计数：
+
+```text
+train = 126,233
+val   = 15,774
+test  = 15,793
+```
 
 ---
 
@@ -236,7 +265,7 @@ PYTHONPATH=src python3 scripts/prepare_datasets.py \
 
 ### 阶段 1：环境验证（第 1-2 天）
 
-1. **跑通数据准备层测试**：`PYTHONPATH=src pytest tests/ -v` → 8 passed
+1. **跑通基础测试**：`python -m compileall src scripts && python -m pytest -q` → 17 passed
 2. **复现 Fed-SB SNLI 联邦隐私实验**：
    ```bash
    bash scripts/run_fedsb_snli_fed_private.sh

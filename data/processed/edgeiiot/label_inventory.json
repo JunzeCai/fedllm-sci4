@@ -1,9 +1,16 @@
 {
   "dataset": "edgeiiotset",
+  "generation": {
+    "count_rows": true,
+    "relative_paths": true,
+    "seed": 20260531,
+    "tool": "scripts/prepare_datasets.py"
+  },
   "label_key": "Attack_type",
   "normalization": {
     "OS_Fingerprinting": "Fingerprinting"
   },
+  "path_mode": "relative",
   "raw_source_label_counts": {
     "Backdoor": 24862,
     "DDoS_HTTP": 229022,
@@ -95,6 +102,7 @@
       "Normal": 746908
     }
   },
+  "schema_version": "2026-06-10",
   "selected_label_counts": {
     "DNN-EdgeIIoT-dataset.csv": {
       "Backdoor": 24862,

@@ -3,6 +3,14 @@
     "DNN",
     "ML"
   ],
+  "generation": {
+    "count_rows": true,
+    "relative_paths": true,
+    "seed": 20260531,
+    "tool": "scripts/prepare_datasets.py"
+  },
+  "path_mode": "relative",
+  "schema_version": "2026-06-10",
   "seed": 20260531,
   "source_files": {
     "Backdoor": [

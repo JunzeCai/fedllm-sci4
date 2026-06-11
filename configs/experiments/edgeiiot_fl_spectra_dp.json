@@ -1,0 +1,69 @@
+{
+  "seed": 20260531,
+  "output_dir": "outputs/edgeiiot_fl_spectra_dp",
+  "data": {
+    "dataset": "edgeiiot_ml",
+    "csv_path": "data/raw/edgeiiotset/ML-EdgeIIoT-dataset-full.csv",
+    "split": "stratified_80_10_10",
+    "exclude_columns": [
+      "frame.time",
+      "ip.src_host",
+      "ip.dst_host",
+      "http.file_data",
+      "http.request.uri.query",
+      "http.referer",
+      "http.request.full_uri",
+      "Attack_label",
+      "Attack_type"
+    ],
+    "prompt_version": "compact_v2",
+    "quantile_bins": 10,
+    "rare_label_policy": "below_median_attack_count"
+  },
+  "fl": {
+    "clients": 10,
+    "partition": "dirichlet",
+    "dirichlet_alpha": 0.5,
+    "rounds": 50,
+    "local_epochs": 1,
+    "participation_rate": 1.0,
+    "aggregation": "weighted_fedavg"
+  },
+  "model": {
+    "backbone": "server_selected_small_lm",
+    "target_modules": ["q_proj", "v_proj"],
+    "adapter": "spectra_core",
+    "candidate_ranks": [4, 8, 16, 32],
+    "rank_budget": 4096,
+    "rank_objective": "energy_per_parameter",
+    "gamma": 1.0,
+    "local_residual": true,
+    "residual_scale": 0.2
+  },
+  "privacy": {
+    "enabled": true,
+    "level": "client",
+    "adjacency": "replace_one",
+    "delta": 1e-5,
+    "target_epsilon": 4.0,
+    "accountant": "conservative_rdp",
+    "clipping": "layerwise",
+    "noise_allocation": "layerwise_spectrum",
+    "report_ledger": true
+  },
+  "metrics": {
+    "primary": "macro_f1",
+    "report": [
+      "accuracy",
+      "macro_f1",
+      "balanced_accuracy",
+      "rare_attack_recall",
+      "per_class_recall",
+      "uploaded_mb",
+      "trainable_params",
+      "epsilon",
+      "wall_clock",
+      "vram_peak"
+    ]
+  }
+}

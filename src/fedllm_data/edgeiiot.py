@@ -85,6 +85,127 @@ def make_source_split_plan(
     }
 
 
+def make_stratified_row_split(
+    csv_path: Path | str,
+    seed: int,
+    train_ratio: float = 0.8,
+    val_ratio: float = 0.1,
+    label_key: str = "Attack_type",
+) -> dict[str, Any]:
+    if not 0 < train_ratio < 1:
+        raise ValueError("train_ratio must be between 0 and 1")
+    if not 0 <= val_ratio < 1:
+        raise ValueError("val_ratio must be between 0 and 1")
+    if train_ratio + val_ratio >= 1:
+        raise ValueError("train_ratio + val_ratio must be less than 1")
+
+    path = Path(csv_path)
+    label_indices: dict[str, list[int]] = {}
+    row_labels: dict[int, str] = {}
+    with path.open("r", encoding="utf-8", errors="replace", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or label_key not in reader.fieldnames:
+            raise ValueError(f"CSV is missing label column {label_key!r}: {path}")
+        for index, row in enumerate(reader):
+            label = normalize_edgeiiot_label(row.get(label_key))
+            if not label:
+                continue
+            label_indices.setdefault(label, []).append(index)
+            row_labels[index] = label
+
+    rng = random.Random(seed)
+    train_indices: list[int] = []
+    val_indices: list[int] = []
+    test_indices: list[int] = []
+    split_label_counts: dict[str, dict[str, int]] = {}
+
+    for label in sorted(label_indices):
+        indices = list(label_indices[label])
+        rng.shuffle(indices)
+        train_count = int(len(indices) * train_ratio)
+        val_count = int(len(indices) * val_ratio)
+        if len(indices) >= 3:
+            train_count = max(1, train_count)
+            val_count = max(1, val_count)
+            if train_count + val_count >= len(indices):
+                val_count = max(0, len(indices) - train_count - 1)
+        train_part = indices[:train_count]
+        val_part = indices[train_count : train_count + val_count]
+        test_part = indices[train_count + val_count :]
+        train_indices.extend(train_part)
+        val_indices.extend(val_part)
+        test_indices.extend(test_part)
+        split_label_counts[label] = {
+            "train": len(train_part),
+            "val": len(val_part),
+            "test": len(test_part),
+            "total": len(indices),
+        }
+
+    return {
+        "strategy": "stratified-row-level",
+        "csv_path": str(path.resolve()),
+        "seed": seed,
+        "train_ratio": train_ratio,
+        "val_ratio": val_ratio,
+        "test_ratio": 1.0 - train_ratio - val_ratio,
+        "label_key": label_key,
+        "labels": sorted(label_indices),
+        "label_counts": {label: len(indices) for label, indices in sorted(label_indices.items())},
+        "split_label_counts": split_label_counts,
+        "train_indices": sorted(train_indices),
+        "val_indices": sorted(val_indices),
+        "test_indices": sorted(test_indices),
+        "row_labels": {str(index): label for index, label in sorted(row_labels.items())},
+    }
+
+
+def make_dirichlet_client_partition(
+    train_indices: list[int],
+    row_labels: dict[int, str] | dict[str, str],
+    num_clients: int,
+    alpha: float,
+    seed: int,
+) -> dict[str, Any]:
+    if num_clients < 1:
+        raise ValueError("num_clients must be positive")
+    if alpha <= 0:
+        raise ValueError("alpha must be positive")
+
+    labels_by_index = {int(index): label for index, label in row_labels.items()}
+    by_label: dict[str, list[int]] = {}
+    for index in train_indices:
+        label = labels_by_index[int(index)]
+        by_label.setdefault(label, []).append(int(index))
+
+    rng = random.Random(seed)
+    clients = [{"client_id": f"client_{i:03d}", "indices": []} for i in range(num_clients)]
+    for label in sorted(by_label):
+        indices = list(by_label[label])
+        rng.shuffle(indices)
+        proportions = _sample_dirichlet(num_clients, alpha, rng)
+        counts = _proportions_to_counts(len(indices), proportions)
+        cursor = 0
+        for client, count in zip(clients, counts, strict=True):
+            client["indices"].extend(indices[cursor : cursor + count])
+            cursor += count
+
+    label_space = sorted(by_label)
+    for client in clients:
+        client["indices"] = sorted(client["indices"])
+        counts = Counter(labels_by_index[index] for index in client["indices"])
+        client["label_counts"] = {label: counts.get(label, 0) for label in label_space}
+        client["sample_count"] = len(client["indices"])
+
+    return {
+        "strategy": "dirichlet-label-skew",
+        "seed": seed,
+        "num_clients": num_clients,
+        "alpha": alpha,
+        "clients": clients,
+    }
+
+
 def build_label_inventory(
     manifest: dict[str, Any],
     label_key: str = "Attack_type",
@@ -235,6 +356,24 @@ def _count_label_values(path: Path, label_key: str) -> dict[str, int]:
             if label:
                 counts[normalize_edgeiiot_label(label)] += 1
     return dict(sorted(counts.items()))
+
+
+def _sample_dirichlet(size: int, alpha: float, rng: random.Random) -> list[float]:
+    draws = [rng.gammavariate(alpha, 1.0) for _ in range(size)]
+    total = sum(draws)
+    if total == 0:
+        return [1.0 / size] * size
+    return [draw / total for draw in draws]
+
+
+def _proportions_to_counts(total: int, proportions: list[float]) -> list[int]:
+    raw = [total * proportion for proportion in proportions]
+    counts = [int(value) for value in raw]
+    remainder = total - sum(counts)
+    order = sorted(range(len(proportions)), key=lambda idx: raw[idx] - counts[idx], reverse=True)
+    for idx in order[:remainder]:
+        counts[idx] += 1
+    return counts
 
 
 def _count_csv_rows(path: Path) -> int:

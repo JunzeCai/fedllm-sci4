@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from fedllm_data.edgeiiot import build_file_manifest, build_label_inventory, make_source_split_plan, read_csv_rows
+from fedllm_data.edgeiiot import make_dirichlet_client_partition, make_stratified_row_split
 from fedllm_data.prompts import render_edgeiiot_prompt
 from fedllm_data.snli import build_snli_manifest
 
@@ -62,6 +63,36 @@ def main() -> int:
     write_json(edge_out / "label_inventory.json", add_generation_metadata(label_inventory, args, path_mode="relative"))
 
     sample_count = write_prompt_smoke_samples(edge_manifest, edge_out / "prompt_smoke_samples.jsonl", args.sample_count)
+    selected_split = None
+    client_partition = None
+    selected_path = _selected_ml_path(edge_manifest)
+    if selected_path is not None:
+        selected_split = make_stratified_row_split(
+            selected_path,
+            seed=args.seed,
+            train_ratio=args.selected_train_ratio,
+            val_ratio=args.selected_val_ratio,
+        )
+        selected_split_out = make_portable_manifest(selected_split, repo_root=repo_root) if args.relative_paths else selected_split
+        write_json(
+            edge_out / f"selected_ml_stratified_split_seed{args.seed}.json",
+            add_generation_metadata(
+                selected_split_out,
+                args,
+                path_mode=selected_split_out.get("path_mode", "absolute"),
+            ),
+        )
+        client_partition = make_dirichlet_client_partition(
+            selected_split["train_indices"],
+            selected_split["row_labels"],
+            num_clients=args.num_clients,
+            alpha=args.dirichlet_alpha,
+            seed=args.seed,
+        )
+        write_json(
+            edge_out / f"selected_ml_clients_seed{args.seed}_K{args.num_clients}_alpha{args.dirichlet_alpha:g}.json",
+            add_generation_metadata(client_partition, args, path_mode="relative"),
+        )
 
     snli_manifest = build_snli_manifest(Path(args.snli_root))
     snli_manifest_out = make_portable_manifest(snli_manifest, repo_root=repo_root) if args.relative_paths else snli_manifest
@@ -82,6 +113,13 @@ def main() -> int:
                 "prompt_smoke_samples": sample_count,
                 "raw_label_count": len(label_inventory["raw_source_label_counts"]),
                 "selected_label_files": len(label_inventory["selected_label_counts"]),
+                "selected_split": None
+                if selected_split is None
+                else {
+                    "train": len(selected_split["train_indices"]),
+                    "val": len(selected_split["val_indices"]),
+                    "test": len(selected_split["test_indices"]),
+                },
                 "snli_rows": {split: item["rows"] for split, item in snli_manifest["splits"].items()},
             },
             indent=2,
@@ -101,6 +139,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--val-ratio", type=float, default=0.1)
     parser.add_argument("--sample-count", type=int, default=32)
     parser.add_argument("--count-rows", action="store_true", help="Count CSV rows in every Edge-IIoTset CSV file.")
+    parser.add_argument("--selected-train-ratio", type=float, default=0.8)
+    parser.add_argument("--selected-val-ratio", type=float, default=0.1)
+    parser.add_argument("--num-clients", type=int, default=10)
+    parser.add_argument("--dirichlet-alpha", type=float, default=0.5)
     parser.add_argument(
         "--skip-selected-label-scan",
         action="store_true",
@@ -133,6 +175,8 @@ def make_portable_manifest(payload: dict[str, Any], repo_root: Path) -> dict[str
 
     if "root" in result:
         result["root"] = _to_relative_or_original(result["root"], repo_root)
+    if "csv_path" in result:
+        result["csv_path"] = _to_relative_or_original(result["csv_path"], repo_root)
 
     for item in result.get("files", []):
         if "path" in item:
@@ -152,7 +196,7 @@ def _to_relative_or_original(path_value: str, repo_root: Path) -> str:
         return path.resolve().relative_to(repo_root).as_posix()
     except ValueError:
         # Preserve only the dataset-internal suffix when the original manifest was
-        # generated on another machine. This avoids committing /Users/... paths.
+        # generated on another machine. This avoids committing local absolute paths.
         parts = path.parts
         for marker in ("data", "raw"):
             if marker in parts:
@@ -191,6 +235,13 @@ def _choose_prompt_source(manifest: dict[str, Any]) -> dict[str, Any] | None:
         if item.get("group") == "selected":
             return item
     return files[0] if files else None
+
+
+def _selected_ml_path(manifest: dict[str, Any]) -> Path | None:
+    for item in manifest.get("files", []):
+        if item.get("group") == "selected" and item.get("selected_kind") == "ML":
+            return Path(item["path"])
+    return None
 
 
 def _choose_prompt_features(header: list[str], max_features: int = 12) -> list[str]:
